@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../Arduino_Alarme"
+		},
+		{
+			"name": "Teste",
+			"path": "../../Teste"
+		},
+		{
+			"name": "Esp32_Alarme",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}

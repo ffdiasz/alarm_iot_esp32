@@ -5,7 +5,7 @@ user::user() :_name("default"), _id("") {}
 
 //SET NAME
 void user::setName(std::string name){
-    _name = "name";
+    _name = name;
 }
 
 //SET ID

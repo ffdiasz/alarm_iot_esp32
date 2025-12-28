@@ -5,3 +5,4 @@ namespace Secure {
     const char* PASSWORD = "36251469JN";
     const char* BOT_TOKEN = "8543802885:AAHRpnUVSAfMlf6VZ4AgXTM8f9NoSPQzHpI";
 }
+

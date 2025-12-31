@@ -1,4 +1,4 @@
-#include "../include/bot.h"
+#include <bot.h>
 
 //builder, inicializa secured_client e telegram_bot
 bot::bot(const char* token)

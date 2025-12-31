@@ -1,4 +1,4 @@
-#include "../include/alarm_manager.h"
+#include <alarm_manager.h>
 
 //builder default
 Alarm::Alarm(){

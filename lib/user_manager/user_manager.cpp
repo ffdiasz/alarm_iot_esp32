@@ -1,4 +1,4 @@
-#include "../include/user_manager.h"
+#include <user_manager.h>
 
 //builder
 user::user() :_name("default"), _id("") {}

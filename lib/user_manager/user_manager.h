@@ -1,5 +1,5 @@
 #pragma once
-#include "../include/alarm_manager.h"
+#include <alarm_manager.h>
 
 //user class
 class user{

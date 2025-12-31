@@ -6,3 +6,4 @@
 include/secure.h
 test/*.exe
 build
+Projeto.txt

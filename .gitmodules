@@ -1,0 +1,3 @@
+[submodule "Wifi_manager"]
+	path = Wifi_manager
+	url = https://github.com/ffdiasz/Wifi_manager.git

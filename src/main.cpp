@@ -1,85 +1,78 @@
 #include <Arduino.h>
-#include "WiFi.h"
 #include "secure.h"
 #include <bot.h>
 #include <alarm_manager.h>
 #include <user_manager.h>
+#include <wifi_manager.h>
+#include <ntp.h>
 
-int8_t tentativas = 5;
-uint32_t Bot_Time = 1000;
-bool WifiStatus = false;
+//Time to main tasks
+constexpr const uint32_t maxWaitTimeWifi = 1000 * 15;  // 15 secs
+constexpr const uint32_t maxWaitTimeNtp = 1000 * 15;  // 15 secs
+constexpr const uint32_t wifiCheckTime = 1000 * 60; // 1 minute
+constexpr const uint32_t ntpCheckTime = 1000 * 60 * 30; // 30 minutes
+constexpr const uint32_t syncCheckTIme = 1000 * 60; // 1 minute
+
+//PreviousTime to main tasks
+uint32_t previousWifiCheck;
+uint32_t previousBotCheck;
+uint32_t previousNtpCheck;
+uint32_t previousSyncCheck;
+
+//NTP
+constexpr const char* ntpServer = "pool.ntp.org";
+constexpr const int32_t  gmtOffset_sec = -3 * 3600; //BRT - brazil
+constexpr const int32_t   daylightOffset_sec = 0; //daylight off
+
+//StateFlags
+bool wifiConnected = false;
 bool NTPstatus = false;
 
-//Inicializa telegram bot
+//Init telegram bot
 bot mamba(Secure::BOT_TOKEN);
 
-//WiFi Credentials
-//SSID and PASSWORD in secure.h archive
-
-void VerificarNTP(){
-  time_t now = time(nullptr);
-
-  if (now > 1600000000){
-    Serial.print("\nRetrieving time: ");
-    Serial.println(now);
-    NTPstatus = true;
-    return;
-  }
-}
-
-void VerificarWifi(){
-  if (WiFi.status() == WL_CONNECTED){
-    Serial.print("\nWifi Conected - IP adress: ");
-    Serial.println(WiFi.localIP());
-    WifiStatus = true;
-    return;
-  }
-}
+//bot times
+constexpr const int8_t tentativas = 5;
+constexpr const uint32_t Bot_Time = 1000;
 
 void setup() {
-  Serial.begin(115200);
   delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!
 
-  Serial.print("Connecting to Wifi SSID ");
-  Serial.print(Secure::SSID);
-  WiFi.begin(Secure::SSID, Secure::PASSWORD);
+  Serial.begin(115200);
+  //Connect to wifi and do some configs
+  wifiConnected = wifiConect(Secure::SSID, Secure::PASSWORD, maxWaitTimeWifi); // wait 15 secs max
 
-  int8_t cont = 0;
-  while (WiFi.status() != WL_CONNECTED && cont < tentativas){
-    Serial.print(".");
-    delay(200);
-    
-    cont++;
-  }
+  //Get Current time
+  NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, maxWaitTimeNtp); // wait 15 secs max
 
-  VerificarWifi();
-
-  Serial.print("\nRetrieving time: ");
-  configTime(-3 * 3600, 0, "pool.ntp.org"); // horario de brasilia via NTP
-  time_t now = time(nullptr);
-  
-  //Compara o ano menor que 2020
-  cont = 0;
-  while(now < 1600000000 && cont < tentativas){
-    Serial.print(".");
-    delay(100);
-    now = time(nullptr);
-
-    cont++;
-  }
-
-  VerificarNTP();
+  previousWifiCheck = millis();
+  previousBotCheck = millis();
+  previousNtpCheck = millis();
 }
 
 void loop() {
-  if (!WifiStatus){
-    VerificarWifi();
+  uint32_t now = millis();
+
+  //Check Wifi Connection every minute
+  if (now - previousWifiCheck > wifiCheckTime){
+    wifiConnected = checkWifiStatus();
+    previousWifiCheck = now;
   }
 
-  if (WifiStatus && !NTPstatus){
-    VerificarNTP();
+  //Resync NTP every 30 minutes for get a precision time
+  if (wifiConnected && (now - previousNtpCheck > ntpCheckTime)){
+    NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
+    previousNtpCheck = now;
   }
 
-  mamba.check_telegram(Bot_Time);
+  // try resync NTP
+  if ((wifiConnected && !NTPstatus) && (now - previousSyncCheck > syncCheckTIme)){
+    NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
+  }
+
+  //Check telegram bot
+  if (wifiConnected) {
+    mamba.check_telegram(Bot_Time);
+  }   
 }
 

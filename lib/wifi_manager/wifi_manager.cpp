@@ -40,33 +40,33 @@ bool wifiConect(const char* ssid, const char* password, uint32_t maxWaitTime){
 }
 
 
-void checkWifiStatus(){
+bool checkWifiStatus(){
     static bool lastState = false;
     bool state = (WiFi.status() == WL_CONNECTED);
 
     //normal
     if (state && lastState){
-        return;
+        return true;
     }
 
     //DISCONNECTED
     if (!state && lastState){
         Serial.println("Wifi disconnected, trying to connect...");
         lastState = false;
-        return;
+        return false;
     }
 
     //RECONNECTED
     if (state && !lastState){
         Serial.println("Wifi reconnected");
         lastState = true;
-        return;
+        return true;
     }
 
     //Trying to connect
     if (!state && !lastState){
         Serial.println("trying to connect...");
         WiFi.begin();
-        return;
+        return false;
     }
 }

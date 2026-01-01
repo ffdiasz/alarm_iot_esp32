@@ -7,4 +7,4 @@
 bool wifiConect(const char* ssid, const char* password, uint32_t maxWaitTime);
 
 //manage the wifi connection
-void checkWifiStatus();
+bool checkWifiStatus();

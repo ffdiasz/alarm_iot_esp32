@@ -1,6 +1,7 @@
 #pragma once
 #include "UniversalTelegramBot.h"
 #include "WiFiClientSecure.h"
+#include "user_manager.h"
 
 class bot{
 private:

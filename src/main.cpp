@@ -73,6 +73,6 @@ void loop() {
   //Check telegram bot
   if (wifiConnected) {
     mamba.check_telegram(Bot_Time);
-  }   
+  }
 }
 

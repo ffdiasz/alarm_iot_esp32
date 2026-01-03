@@ -20,7 +20,7 @@ void bot::HandleNewMessages(uint16_t newMessages){
         from_name = "Guest";
     
     if(text == "/start"){
-        String Welcome = "MAMBA INICIADO COM SUCESSO! \n";
+        String Welcome = "AlarmClockBot INICIADO COM SUCESSO! \n";
         Welcome+= "principais comandos:\n";
         Welcome+="1-\n";
         Welcome+="2-\n";

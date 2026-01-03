@@ -10,6 +10,7 @@ bot::bot(const char* token)
 void bot::HandleNewMessages(uint16_t newMessages){
     Serial.print("handleNewMessages ");
     Serial.println(newMessages);
+    
 
     for (int i = 0; i < newMessages; i++){
         String chat_id = Telegram_bot.messages[i].chat_id;
@@ -47,4 +48,22 @@ void bot::check_telegram(uint32_t bot_interval){
         
         bot_lasttime = millis();
     }
+}
+
+uint16_t bot::CheckUpdates(){
+    uint16_t newMessages = Telegram_bot.getUpdates(Telegram_bot.last_message_received +1);
+
+    return newMessages;
+}
+
+std::vector<Message> bot::getMessages(uint16_t newMessages){
+    std::vector<Message> messageList;
+    messageList.reserve(newMessages);
+
+    for (int i = 0; i < newMessages; i++){
+        messageList[i].id = Telegram_bot.messages[i].chat_id;
+        messageList[i].text = Telegram_bot.messages[i].text;
+    }
+
+    return messageList;
 }

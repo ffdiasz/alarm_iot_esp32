@@ -20,7 +20,7 @@ public:
     //builder
     bot(const char* token);
 
-    void sendMessage(char* message) const;
+    void sendMessage(Message);
 
     //return the number of New Messages 
     uint16_t CheckUpdates();

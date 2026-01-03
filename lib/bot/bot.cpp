@@ -50,13 +50,24 @@ void bot::check_telegram(uint32_t bot_interval){
     }
 }
 
+//Return the number of New Messages
 uint16_t bot::CheckUpdates(){
     uint16_t newMessages = Telegram_bot.getUpdates(Telegram_bot.last_message_received +1);
 
     return newMessages;
 }
 
+//Send a message to User using the Telegram Bot
+//Parameter is a message type (chat id and message to be sent)
+void bot::sendMessage(Message messageToSent){
+    Telegram_bot.sendMessage(messageToSent.id ,messageToSent.text);
+}
+
+//return a vector of the type Message
+//newMessages is the parameter used to reserve space
 std::vector<Message> bot::getMessages(uint16_t newMessages){
+
+    //init message vector and reserve only necessary bytes
     std::vector<Message> messageList;
     messageList.reserve(newMessages);
 

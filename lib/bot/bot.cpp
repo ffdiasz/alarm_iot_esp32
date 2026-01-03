@@ -59,8 +59,8 @@ uint16_t bot::CheckUpdates(){
 
 //Send a message to User using the Telegram Bot
 //Parameter is a message type (chat id and message to be sent)
-void bot::sendMessage(Message messageToSent){
-    Telegram_bot.sendMessage(messageToSent.id ,messageToSent.text);
+void bot::sendMessage(Message* messageToSent){
+    Telegram_bot.sendMessage(messageToSent->id ,messageToSent->id);
 }
 
 //return a vector of the type Message

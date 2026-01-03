@@ -20,7 +20,9 @@ public:
     //builder
     bot(const char* token);
 
-    void sendMessage(Message);
+    //Send a message to User using the Telegram Bot
+    //Parameter is a message type (chat id and message to be sent)
+    void sendMessage(Message* messageToSent);
 
     //return the number of New Messages 
     uint16_t CheckUpdates();

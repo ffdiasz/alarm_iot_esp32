@@ -1,3 +1,4 @@
+#pragma once
 #include "bot.h"
 #include "user_manager.h"
 #include "secure.h"
@@ -20,7 +21,7 @@ public:
     //builder
     SystemControl(bot& TelegramBot);
 
-    void HandleMessages();
+    void SystemControl::HandleMessages(uint16_t numMessages);
 };
 
 

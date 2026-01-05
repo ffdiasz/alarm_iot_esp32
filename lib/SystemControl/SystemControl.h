@@ -1,10 +1,6 @@
 #pragma once
-#include "bot.h"
+#include "UniversalTelegramBot.h"
 #include "user_manager.h"
-#include "secure.h"
-
-#include <UniversalTelegramBot.h>
-#include <WiFiClientSecure.h>
 
 enum class SystemStates : int8_t{
     idle,
@@ -16,12 +12,13 @@ enum class SystemStates : int8_t{
 class SystemControl {
 private:
     user _Users[4];
-    bot& _TelegramBot;
+    UniversalTelegramBot& _TelegramBot;
 public:
     //builder
-    SystemControl(bot& TelegramBot);
+    SystemControl(UniversalTelegramBot& TelegramBot);
 
-    void SystemControl::HandleMessages(uint16_t numMessages);
+    void HandleMessages(uint16_t numMessages);
+
 };
 
 

@@ -1,23 +1,26 @@
 #include <Arduino.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include "alarm_manager.h"
+#include "user_manager.h"
+#include "wifi_manager.h"
 #include "secure.h"
-#include <bot.h>
-#include <alarm_manager.h>
-#include <user_manager.h>
-#include <wifi_manager.h>
-#include <ntp.h>
+#include "ntp.h"
+#include "SystemControl.h"
 
 //Time to main tasks
-constexpr const uint32_t maxWaitTimeWifi = 1000 * 15;  // 15 secs
-constexpr const uint32_t maxWaitTimeNtp = 1000 * 15;  // 15 secs
-constexpr const uint32_t wifiCheckTime = 1000 * 60; // 1 minute
-constexpr const uint32_t ntpCheckTime = 1000 * 60 * 30; // 30 minutes
-constexpr const uint32_t syncCheckTIme = 1000 * 60; // 1 minute
+constexpr const uint32_t maxWaitTimeWifi    = 1000 * 15;      // 15 secs
+constexpr const uint32_t maxWaitTimeNtp     = 1000 * 15;      // 15 secs
+constexpr const uint32_t wifiCheckTime      = 1000 * 60;      // 1 minute
+constexpr const uint32_t ntpCheckTime       = 1000 * 60 * 30; // 30 minutes
+constexpr const uint32_t syncCheckTime      = 1000 * 60;      // 1 minute
+constexpr const uint32_t messageCheckTime   = 1000;           // 1 sec
 
 //PreviousTime to main tasks
 uint32_t previousWifiCheck;
-uint32_t previousBotCheck;
 uint32_t previousNtpCheck;
 uint32_t previousSyncCheck;
+uint32_t previousMessageCheck;
 
 //NTP
 constexpr const char* ntpServer = "pool.ntp.org";
@@ -29,11 +32,12 @@ bool wifiConnected = false;
 bool NTPstatus = false;
 
 //Init telegram bot
-bot mamba(Secure::BOT_TOKEN);
+WiFiClientSecure secured_client;
+UniversalTelegramBot AlarmClockBot(Secure::BOT_TOKEN, secured_client);
 
-//bot times
-constexpr const int8_t tentativas = 5;
-constexpr const uint32_t Bot_Time = 1000;
+//SystemControl
+SystemControl TelegramManager(AlarmClockBot);
+
 
 void setup() {
   delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!
@@ -42,37 +46,50 @@ void setup() {
   //Connect to wifi and do some configs
   wifiConnected = wifiConect(Secure::SSID, Secure::PASSWORD, maxWaitTimeWifi); // wait 15 secs max
 
+  // Add root certificate for api.telegram.org
+  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT); 
+
   //Get Current time
   NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, maxWaitTimeNtp); // wait 15 secs max
 
   previousWifiCheck = millis();
-  previousBotCheck = millis();
+  previousMessageCheck = millis();
   previousNtpCheck = millis();
+  previousSyncCheck = millis();
 }
 
 void loop() {
   uint32_t now = millis();
 
+  if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){
+    uint16_t newMessages = AlarmClockBot.getUpdates(AlarmClockBot.last_message_received + 1);
+
+    if (newMessages > 0){
+      TelegramManager.HandleMessages(newMessages);
+    }
+  
+    previousMessageCheck = millis();
+  }
+
   //Check Wifi Connection every minute
   if (now - previousWifiCheck > wifiCheckTime){
     wifiConnected = checkWifiStatus();
-    previousWifiCheck = now;
+
+    previousWifiCheck = millis();
   }
 
   //Resync NTP every 30 minutes for get a precision time
   if (wifiConnected && (now - previousNtpCheck > ntpCheckTime)){
     NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
-    previousNtpCheck = now;
+
+    previousNtpCheck = millis();
   }
 
   // try resync NTP
-  if ((wifiConnected && !NTPstatus) && (now - previousSyncCheck > syncCheckTIme)){
+  if ((wifiConnected && !NTPstatus) && (now - previousSyncCheck > syncCheckTime)){
     NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
-  }
 
-  //Check telegram bot
-  if (wifiConnected) {
-    mamba.check_telegram(Bot_Time);
+    previousSyncCheck = millis();
   }
 }
 

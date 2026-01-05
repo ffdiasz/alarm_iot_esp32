@@ -1,34 +1,27 @@
 #include "SystemControl.h"
 
 //builder
-SystemControl :: SystemControl(bot& TelegramBot)
+SystemControl :: SystemControl(UniversalTelegramBot& TelegramBot)
 :_TelegramBot(TelegramBot)
 {
 
 }
 
 void SystemControl::HandleMessages(uint16_t numMessages){
-    Serial.print("HandleNewMessages ");
+    Serial.print("HandleMessages: ");
     Serial.println(numMessages);
 
-    //Reserve space and get the newMessages
-    std::vector<Message> messageList;
-    messageList.reserve(numMessages);
-    messageList = _TelegramBot.getMessages(numMessages);
+    for (uint16_t i = 0; i < numMessages; i++){
+        const String& id = _TelegramBot.messages[i].chat_id;
+        const String& text = _TelegramBot.messages[i].text;
 
-    //Execute the commands
-    for (const auto& msg : messageList ){
+        if (text.length() == 0){
+            continue; //pass to the next iteration
+        }
 
-        if(msg.text == "/start"){
-            String Welcome = "AlarmClockBot INICIADO COM SUCESSO! \n";
-            Welcome+= "principais comandos:\n";
-            Welcome+="1-\n";
-            Welcome+="2-\n";
-            Welcome+="3-\n";
-
-            Message messageToSent {msg.id,Welcome};
-
-            _TelegramBot.sendMessage(&messageToSent);
+        if (text == "/start"){
+            const char* messageSend = "AlarmClockBot begin";
+            _TelegramBot.sendMessage(id,messageSend);
         }
     }
 }

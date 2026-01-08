@@ -1,59 +1,67 @@
-#include <alarm_manager.h>
+#include "alarm_manager.h"
 
 //builder default
 Alarm::Alarm(){
-    _title = "";
-    _timeAlarm = {0,0};
+    _label = "";
     _state = false;
+    _AlarmTime.tm_hour = 0;
+    _AlarmTime.tm_min = 0;
 }
 
-//Status
+//Return a string with time, label and state
 std::string Alarm::getStatus() const{
     std::string status = "Alarm: ";
-    status += _title;
-    status += " Time: ";
-
-    //format hours
-    if(_timeAlarm._hour <10){
-        status += "0";
-        status += std::to_string(_timeAlarm._hour);
-    } 
     
-    else {
-        status += std::to_string(_timeAlarm._hour);
-    }
-
+    //Time Formatation
+    status += ((_AlarmTime.tm_hour < 10) ? "0" : "") + std::to_string(_AlarmTime.tm_hour);
     status += ":";
+    status += ((_AlarmTime.tm_min < 10) ? "0" : "")  + std::to_string(_AlarmTime.tm_min);
 
-    //format minutes
-    if(_timeAlarm._minutes <10){
-        status += "0";
-        status += std::to_string(_timeAlarm._minutes);
-    }
+    status += " | Label: ";
+    status += _label;
 
-    else {
-        status += std::to_string(_timeAlarm._minutes);
-    }
-
-    status += " State: ";
-    status += (_state) ? "Enabled" : "Disabled";
-
+    status += " | status: ";
+    status += ((_state) ? "ON" : "OFF");
     return status;
-
 }
 
-//set title
-void Alarm::setTitle(std::string& title){
-    _title = title;
+//Return alarm state (ON/OFF)
+bool Alarm::getState() const{
+    return _state;
+}
+
+//Check if it's time to sound alarm
+bool Alarm::checkTime(const tm& timeNow) const{
+
+    bool hourCheck = (timeNow.tm_hour == _AlarmTime.tm_hour);
+    bool minCheck = (timeNow.tm_min == _AlarmTime.tm_min);
+
+    if (hourCheck && minCheck){
+        return true;
+    }
+
+    return false;
+}
+
+//Set Alarm label
+void Alarm::setLabel(std::string& label){
+    _label = label;
 }
 
 //set time
-void Alarm::setTime(AlarmTime time){
-    _timeAlarm = time;
+bool Alarm::setTime(uint8_t hour, uint8_t minutes){
+
+    if ((hour >= 0 && hour <=23) && (minutes >= 0 && minutes <=59)){
+        _AlarmTime.tm_hour = hour;
+        _AlarmTime.tm_min = minutes;
+
+        return true;
+    }
+
+    return false;
 }
 
 //set state
 void Alarm::setState(bool state){
     _state = state;
 }
-

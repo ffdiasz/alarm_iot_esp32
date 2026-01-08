@@ -1,7 +1,7 @@
 #pragma once
-#include <iostream>
 #include <cstdint>
 #include <string>
+#include <time.h>
 
 struct AlarmTime{
     uint8_t _hour;
@@ -10,19 +10,25 @@ struct AlarmTime{
 
 class Alarm{
 private:
-    std::string _title;
-    AlarmTime _timeAlarm;
+    std::string _label;
+    struct tm _AlarmTime;
     bool _state;
 
 public:
     //builder
     Alarm();
 
-    //Status
+    //Return a string with time, label and state
     std::string getStatus() const;
 
+    //Return alarm state (ON/OFF)
+    bool getState() const;
+
     //sets
-    void setTitle(std::string& title);
-    void setTime(AlarmTime time);
+    void setLabel(std::string& label);
+    bool setTime(uint8_t hour, uint8_t minutes);
     void setState(bool state);
+
+    //Check if is time to sound alarme
+    bool checkTime(const tm& timeNow) const;
 };

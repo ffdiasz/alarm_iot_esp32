@@ -1,4 +1,4 @@
-#include <ntp.h>
+#include "ntp.h"
 
 bool ntpSync(const int32_t  gmtOffset_sec, const int32_t daylightOffset_sec,const char* ntpServer, const uint32_t MaxWaitTime){
 
@@ -20,4 +20,13 @@ bool ntpSync(const int32_t  gmtOffset_sec, const int32_t daylightOffset_sec,cons
     }
         
     return (t > 1600000000);
+}
+
+//get localTime and return an struct tm
+tm getTime(){
+    time_t time0;
+    time(&time0);
+    struct tm *timeNow = localtime(&time0);
+
+    return *timeNow;
 }

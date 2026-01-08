@@ -1,5 +1,6 @@
-#include "../include/user_manager.h"
-#include "../include/secure.h"
+#include "user_manager.h"
+#include "secure.h"
+#include <iostream>
 
 user usuarios[4];
 

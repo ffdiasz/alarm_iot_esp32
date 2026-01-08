@@ -7,6 +7,7 @@
 #include "secure.h"
 #include "ntp.h"
 #include "SystemControl.h"
+#include "array"
 
 //Time to main tasks
 constexpr const uint32_t maxWaitTimeWifi    = 1000 * 15;      // 15 secs
@@ -35,8 +36,11 @@ bool NTPstatus = false;
 WiFiClientSecure secured_client;
 UniversalTelegramBot AlarmClockBot(Secure::BOT_TOKEN, secured_client);
 
+//Init users
+std::array <user,4> users;
+
 //SystemControl
-SystemControl TelegramManager(AlarmClockBot);
+SystemControl TelegramManager(AlarmClockBot, users);
 
 
 void setup() {

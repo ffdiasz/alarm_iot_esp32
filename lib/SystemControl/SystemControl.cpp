@@ -1,8 +1,8 @@
 #include "SystemControl.h"
 
 //builder
-SystemControl :: SystemControl(UniversalTelegramBot& TelegramBot)
-:_TelegramBot(TelegramBot)
+SystemControl :: SystemControl(UniversalTelegramBot& TelegramBot, std::array <user,4>& users)
+:_TelegramBot(TelegramBot), _users(users)
 {
 
 }

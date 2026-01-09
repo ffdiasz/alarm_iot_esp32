@@ -51,7 +51,7 @@ void setup() {
   wifiConnected = wifiConect(Secure::SSID, Secure::PASSWORD, maxWaitTimeWifi); // wait 15 secs max
 
   // Add root certificate for api.telegram.org
-  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT); 
+  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
 
   //Get Current time
   NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, maxWaitTimeNtp); // wait 15 secs max
@@ -65,6 +65,7 @@ void setup() {
 void loop() {
   uint32_t now = millis();
 
+  // TASK 1: Alarms and Telegram (1 sec)
   if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){
     uint16_t newMessages = AlarmClockBot.getUpdates(AlarmClockBot.last_message_received + 1);
 
@@ -75,25 +76,18 @@ void loop() {
     previousMessageCheck = millis();
   }
 
-  //Check Wifi Connection every minute
+  //TASK 2: Check Wifi Connection (1 minute)
   if (now - previousWifiCheck > wifiCheckTime){
     wifiConnected = checkWifiStatus();
 
     previousWifiCheck = millis();
   }
 
-  //Resync NTP every 30 minutes for get a precision time
+  //TASK 3: Resync NTP (30 Minutes)
   if (wifiConnected && (now - previousNtpCheck > ntpCheckTime)){
     NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
 
     previousNtpCheck = millis();
-  }
-
-  // try resync NTP
-  if ((wifiConnected && !NTPstatus) && (now - previousSyncCheck > syncCheckTime)){
-    NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
-
-    previousSyncCheck = millis();
   }
 }
 

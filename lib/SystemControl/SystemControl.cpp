@@ -1,6 +1,6 @@
 #include "SystemControl.h"
 
-//builder
+//Constructor
 SystemControl :: SystemControl(UniversalTelegramBot& TelegramBot, std::array <user,4>& users)
 :_TelegramBot(TelegramBot), _users(users)
 {
@@ -23,5 +23,16 @@ void SystemControl::HandleMessages(uint16_t numMessages){
             const char* messageSend = "AlarmClockBot begin";
             _TelegramBot.sendMessage(id,messageSend);
         }
+    }
+}
+
+//if user is active and have alarm to ring return true
+bool SystemControl::CheckAlarms(struct tm& timeNow){
+    for (const auto& user : _users){
+        if (user.isActive() && user.checkAlarms(timeNow)){
+            return true;
+        }
+
+        return false;
     }
 }

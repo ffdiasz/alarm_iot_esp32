@@ -15,10 +15,12 @@ private:
     std::array <user,4>& _users;
     UniversalTelegramBot& _TelegramBot;
 public:
-    //builder
+    //Constructor
     SystemControl(UniversalTelegramBot& TelegramBot, std::array <user,4>& users);
 
     void HandleMessages(uint16_t numMessages);
+
+    bool CheckAlarms(struct tm& timeNow);
 
 };
 

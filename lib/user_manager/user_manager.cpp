@@ -9,12 +9,29 @@ void user::setName(std::string& name){
 }
 
 //SET ID
-void user::setId(std::string& id){
+void user::setId(const char* id){
     _id = id;
 }
 
+//Set user state
 void user::setState(bool state){
     _state = state;
+}
+
+//check unactive alarms and replace with the new one
+//return false if all are active.
+bool user::addAlarm(uint8_t index, uint8_t hour, uint8_t min, std::string label){
+    
+    if(index >=0 && index < maxSizeOfAlarmsArray){ 
+        myAlarms[index].setTime(hour,min);
+        myAlarms[index].setLabel(label);
+        myAlarms[index].setState(true);
+
+        return true;
+    }
+
+    //all alarms in use
+    return false;
 }
 
 //GET USER NAME
@@ -23,7 +40,7 @@ const std::string& user::getName() const{
 }
 
 //GET USER ID
-const std::string& user::getId() const{
+const char* user::getId() const{
     return _id;
 }
 
@@ -36,9 +53,8 @@ bool user::isActive() const{
 std::string user::getAlarms() const{
     std::string status; 
 
-    for (const auto& alarm : myAlarms){
-        status +=alarm.getStatus();
-        //breakLine
+    for (uint8_t i = 0; i < maxSizeOfAlarmsArray; i++){
+        status = ((i+1) + ": " + myAlarms[i].getStatus());
         status += "\n";
     }
 

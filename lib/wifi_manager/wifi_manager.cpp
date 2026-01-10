@@ -44,11 +44,6 @@ bool checkWifiStatus(){
     static bool lastState = false;
     bool state = (WiFi.status() == WL_CONNECTED);
 
-    //normal
-    if (state && lastState){
-        return true;
-    }
-
     //DISCONNECTED
     if (!state && lastState){
         Serial.println("Wifi disconnected, trying to connect...");
@@ -69,4 +64,7 @@ bool checkWifiStatus(){
         WiFi.begin();
         return false;
     }
+
+    //normal
+    return true;
 }

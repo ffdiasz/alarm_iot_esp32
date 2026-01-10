@@ -2,7 +2,6 @@
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include "alarm_manager.h"
-#include "user_manager.h"
 #include "wifi_manager.h"
 #include "secure.h"
 #include "ntp.h"
@@ -36,12 +35,8 @@ bool NTPstatus = false;
 WiFiClientSecure secured_client;
 UniversalTelegramBot AlarmClockBot(Secure::BOT_TOKEN, secured_client);
 
-//Init users
-std::array <user,4> users;
-
 //SystemControl
-SystemControl TelegramManager(AlarmClockBot, users);
-
+SystemControl SystemManager(AlarmClockBot);
 
 void setup() {
   delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!
@@ -70,7 +65,7 @@ void loop() {
     uint16_t newMessages = AlarmClockBot.getUpdates(AlarmClockBot.last_message_received + 1);
 
     if (newMessages > 0){
-      TelegramManager.HandleMessages(newMessages);
+      SystemManager.HandleMessages(newMessages);
     }
   
     previousMessageCheck = millis();

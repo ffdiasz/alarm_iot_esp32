@@ -14,7 +14,7 @@ constexpr const uint32_t maxWaitTimeNtp     = 1000 * 15;      // 15 secs
 constexpr const uint32_t wifiCheckTime      = 1000 * 60;      // 1 minute
 constexpr const uint32_t ntpCheckTime       = 1000 * 60 * 30; // 30 minutes
 constexpr const uint32_t syncCheckTime      = 1000 * 60;      // 1 minute
-constexpr const uint32_t messageCheckTime   = 1000;           // 1 sec
+constexpr const uint32_t messageCheckTime   = 500;           // 0.5 sec
 
 //PreviousTime to main tasks
 uint32_t previousWifiCheck;
@@ -62,11 +62,7 @@ void loop() {
 
   // TASK 1: Alarms and Telegram (1 sec)
   if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){
-    uint16_t newMessages = AlarmClockBot.getUpdates(AlarmClockBot.last_message_received + 1);
-
-    if (newMessages > 0){
-      SystemManager.HandleMessages(newMessages);
-    }
+    SystemManager.TelegramManager();
   
     previousMessageCheck = millis();
   }

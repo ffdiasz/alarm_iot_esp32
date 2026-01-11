@@ -4,7 +4,7 @@
 user::user() :_name("default"), _id(""), _state(false){}
 
 //SET NAME
-void user::setName(std::string& name){
+void user::setName(const char* name){
     _name = name;
 }
 
@@ -35,7 +35,7 @@ bool user::addAlarm(uint8_t index, uint8_t hour, uint8_t min, std::string label)
 }
 
 //GET USER NAME
-const std::string& user::getName() const{
+const char* user::getName() const{
     return _name;
 }
 

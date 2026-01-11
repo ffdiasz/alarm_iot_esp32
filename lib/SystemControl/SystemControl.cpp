@@ -18,48 +18,38 @@ bool SystemControl::CheckAlarms(struct tm& timeNow){
     return false;
 }
 
-void SystemControl::HandleMessages(uint16_t numMessages){
-    Serial.print("HandleMessages: ");
-    Serial.println(numMessages);
+//Handle new telegram messages
+void SystemControl::HandleMessages(const char* id,uint16_t numMessages){
 
     for (uint16_t i = 0; i < numMessages; i++){
-        //c_str() return a const char pointer
-        const char* id = _TelegramBot.messages[i].chat_id.c_str();
         //Using string& because i need a string to compare 
         const std::string& text = _TelegramBot.messages[i].text.c_str();
 
-        int8_t UserIndex = findUserId(id);
-
-        if (UserIndex == -1){
-            const char* message = "User dont register";
-            Serial.println(message);
-            _TelegramBot.sendMessage(id,message);
-            continue; //pass to the next iteration
-        }
-
-        if (text == ""){
+        if (text == "")
+        {
             Serial.println("void message");
             continue; //pass to the next iteration
         }
 
-        if (text == "/start"){
+        if (text == "/start")
+        {
             Serial.println("/start");
             const char* messageSend = "AlarmClockBot begin";
             _TelegramBot.sendMessage(id,messageSend);
         }
 
-        else if (text == "/showAlarms"){
+        else if (text == "/showAlarms")
+        {
             
         }
     }
 }
 
-
+//State Machine for manager telegram actions
 void SystemControl::TelegramManager(){
     switch (_State){
     
-        //waiting new messages from telegram
-        case TelegramStates::idle:
+        case TelegramStates::idle: //waiting new messages from telegram
         {
             _newMessages = _TelegramBot.getUpdates(_TelegramBot.last_message_received + 1);
             
@@ -72,13 +62,13 @@ void SystemControl::TelegramManager(){
             break;
         }
         
-        //Check if use is register
-        case TelegramStates::checkUser:
+        case TelegramStates::checkUser: //Check if use is register
         {
             _LastUserID = _TelegramBot.messages->chat_id.c_str();
             Serial.print("ID: ");
             Serial.println(_LastUserID);
 
+            //if user isn't registered send to RegisterUser
             if (findUserId(_LastUserID) == -1){
                 const char* message = "User doesn't register";
                 Serial.println(message);
@@ -88,11 +78,12 @@ void SystemControl::TelegramManager(){
                 break;
             }
 
-            _State = TelegramStates::idle;
+            //handle messages
+            _State = TelegramStates::handle;
             break;
         }
         
-        case TelegramStates::registerUser:
+        case TelegramStates::registerUser: //Register new user
         {
             int8_t freeUserIndex = hasFreeUser();
 
@@ -111,9 +102,16 @@ void SystemControl::TelegramManager(){
                 break;
             }
 
+            //waiting register 
             break;
         }
 
+        case TelegramStates::handle: //handle new messages
+        {
+            HandleMessages(_LastUserID,_newMessages);
+            _State = TelegramStates::idle;
+            break;
+        }
     }
 }
 
@@ -124,7 +122,6 @@ int8_t SystemControl::findUserId(const char* id) const{
             return i;
         }
     }
-
     //user id doesn't exists in array
     return -1;
 }
@@ -132,12 +129,10 @@ int8_t SystemControl::findUserId(const char* id) const{
 //return user index or -1 if all user status is active
 int8_t SystemControl::hasFreeUser() const{
     for (uint8_t i = 0; i < maxUsers; i++){
-        
         if (!_users[i].isActive()){
             return i;
         }
     }
-
     //all user is active
     return -1;
 }

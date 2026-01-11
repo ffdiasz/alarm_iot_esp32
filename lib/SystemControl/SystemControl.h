@@ -26,7 +26,7 @@ public:
     //Constructor
     SystemControl(UniversalTelegramBot& TelegramBot);
 
-    void HandleMessages(uint16_t numMessages);
+    void HandleMessages(const char* id,uint16_t numMessages);
 
     void TelegramManager();
 

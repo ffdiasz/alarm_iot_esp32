@@ -8,26 +8,18 @@ Alarm::Alarm(){
     _AlarmTime.tm_min = 0;
 }
 
-//Return a string with time, label and state
-std::string Alarm::getStatus() const{
-    std::string status = "Alarm: ";
-    
-    //Time Formatation
-    status += ((_AlarmTime.tm_hour < 10) ? "0" : "") + std::to_string(_AlarmTime.tm_hour);
-    status += ":";
-    status += ((_AlarmTime.tm_min < 10) ? "0" : "")  + std::to_string(_AlarmTime.tm_min);
-
-    status += " | Label: ";
-    status += _label;
-
-    status += " | status: ";
-    status += ((_state) ? "ON" : "OFF");
-    return status;
+//Return a struct tm alarm
+const struct tm& Alarm::getAlarm() const{
+    return _AlarmTime;
 }
 
 //Return alarm state (ON/OFF)
 bool Alarm::getState() const{
     return _state;
+}
+
+const char* Alarm::getLabel() const{
+    return _label;
 }
 
 //Check if it's time to sound alarm
@@ -44,7 +36,7 @@ bool Alarm::checkTime(const tm& timeNow) const{
 }
 
 //Set Alarm label
-void Alarm::setLabel(std::string& label){
+void Alarm::setLabel(const char* label){
     _label = label;
 }
 

@@ -39,8 +39,21 @@ void SystemControl::HandleMessages(const char* id,uint16_t numMessages){
         }
 
         else if (text == "/showAlarms")
-        {
+        {   
+            Serial.println("/ShowAlarms");
+
+            uint8_t index = findUserId(_LastUserID); //get user index
+            std::string message = _users[index].getAlarms();//get alarms
+
+            _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
+        }
+
+        else //command not found
+        {   
+            const char* message = "command not found, try /help";
             
+            Serial.println(message);
+            _TelegramBot.sendMessage(_LastUserID,message);
         }
     }
 }

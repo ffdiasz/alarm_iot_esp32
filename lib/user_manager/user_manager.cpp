@@ -20,8 +20,9 @@ void user::setState(bool state){
 
 //check unactive alarms and replace with the new one
 //return false if all are active.
-bool user::addAlarm(uint8_t index, uint8_t hour, uint8_t min, std::string label){
+bool user::addAlarm(uint8_t index, uint8_t hour, uint8_t min, const char* label){
     
+    //check if index is valid and define alarm
     if(index >=0 && index < maxSizeOfAlarmsArray){ 
         myAlarms[index].setTime(hour,min);
         myAlarms[index].setLabel(label);
@@ -49,16 +50,22 @@ bool user::isActive() const{
     return _state;
 }
 
-//GET USER ALARMS
+//return formated time, label and state
 std::string user::getAlarms() const{
-    std::string status; 
+    std::string msg;
+    char charAlarms[64];
 
-    for (uint8_t i = 0; i < maxSizeOfAlarmsArray; i++){
-        status = ((i+1) + ": " + myAlarms[i].getStatus());
-        status += "\n";
+    for (const auto& alarm : myAlarms){
+        snprintf(charAlarms, sizeof(charAlarms), "*Alarme:* [%02d:%02d] *Label:* %s *State:* %s \n",
+        alarm.getAlarm().tm_hour,
+        alarm.getAlarm().tm_min,
+        alarm.getLabel(),
+        alarm.getState() ? "ON" : "OFF");
+
+        msg += charAlarms;
     }
 
-    return status;
+    return msg;
 }
 
 //Check active alarms, if its time to ring return true

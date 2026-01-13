@@ -19,7 +19,7 @@ public:
     void setName(const char* name);
     void setId(const char* id);
     void setState(bool state);
-    bool addAlarm(uint8_t index, uint8_t hour, uint8_t min, std::string label);
+    bool addAlarm(uint8_t index, uint8_t hour, uint8_t min, const char* label);
 
     //gets
     const char* getName() const;

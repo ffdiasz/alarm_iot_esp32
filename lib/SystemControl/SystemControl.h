@@ -38,4 +38,5 @@ public:
 
     bool newUser(uint8_t UserIndex);
 
+    int8_t configAlarm();
 };

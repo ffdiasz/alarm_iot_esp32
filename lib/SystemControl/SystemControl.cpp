@@ -48,6 +48,20 @@ void SystemControl::HandleMessages(const char* id,uint16_t numMessages){
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
         }
 
+        else if (text == "/configAlarm")
+        {
+            Serial.println("/configAlarm");
+
+            if (configAlarm() == -1){
+                Serial.println("ERRO");
+            }
+
+            else if (configAlarm() == true){
+                Serial.println("SUCESS");
+            }
+
+        }
+        
         else //command not found
         {   
             const char* message = "command not found, try /help";
@@ -199,5 +213,81 @@ bool SystemControl::newUser(uint8_t UserIndex){
     }
 
     //in progress
+    return false;
+}
+
+int8_t SystemControl::configAlarm(){
+    static uint8_t state = 0;
+    static int8_t alarmIndex;
+
+    switch(state){
+        
+        case 0: //showAlarms
+        {   
+            _TelegramBot.sendMessage(_LastUserID, "Which alarm you want config? send the line number");
+            uint8_t index = findUserId(_LastUserID); //get user index
+            std::string message = _users[index].getAlarms();//get alarms
+
+            _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
+
+            state = 1;
+            break;
+        }
+
+        case 1: //waiting alarm index
+        {
+            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
+            {
+                //receive msg from telegram and convert to int
+                const char* msg = _TelegramBot.messages->text.c_str();
+                alarmIndex = std::atoi(msg); //convert string to int
+
+                Serial.println("String converted");
+
+                state = 2;
+                break;
+            }
+
+            //no messages
+            break;
+        }
+        
+        case 2: //check if input is a number
+        {
+            if (alarmIndex != 0){
+
+                Serial.println("IS A NUMBER");
+                state = 3;
+                break;
+            }
+
+            //isn't a number
+            Serial.println("IS NOT A NUMBER");
+            state = 4;
+        }
+
+        case 3: //security check to prevent overflow
+        {
+            if (alarmIndex > 0 && alarmIndex <= maxSizeOfAlarmsArray)
+            {
+                Serial.println("input correct");
+                state = 0;
+                return true;
+            }
+
+            else //incorrect input, alarm doesn't exist
+            {
+                Serial.println("buffer overflow");
+                state = 4;
+            }
+        }
+
+        case 4: //error
+        {
+            state = 0;
+            return -1;
+        }
+    }
+
     return false;
 }

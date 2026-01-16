@@ -10,9 +10,26 @@ constexpr const uint8_t maxUsers = 4;
 enum class TelegramStates : uint8_t{
     idle,
     checkUser,
+    checkFreeUser,
     registerUser,
+    getMessage,
     handle,
     erro,
+};
+
+//Messages receive from Telegram
+enum class TelegramCommands : uint8_t{
+    start,
+    showAlarms,
+    configAlarm,
+    help,
+    unknown,
+};
+
+enum class MachineState : uint8_t{
+    waiting,
+    sucess,
+    erro
 };
 
 class SystemControl {
@@ -26,8 +43,6 @@ public:
     //Constructor
     SystemControl(UniversalTelegramBot& TelegramBot);
 
-    void HandleMessages(const char* id,uint16_t numMessages);
-
     void TelegramManager();
 
     bool CheckAlarms(struct tm& timeNow);
@@ -36,7 +51,11 @@ public:
 
     int8_t hasFreeUser() const;
 
-    bool newUser(uint8_t UserIndex);
+    TelegramCommands getCommand(); 
 
-    int8_t configAlarm();
+    MachineState HandleMessages(const char* id, TelegramCommands msg); 
+
+    MachineState configAlarm();
+
+    MachineState newUser(uint8_t UserIndex);
 };

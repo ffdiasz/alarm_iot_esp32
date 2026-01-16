@@ -18,62 +18,77 @@ bool SystemControl::CheckAlarms(struct tm& timeNow){
     return false;
 }
 
-//Handle new telegram messages
-void SystemControl::HandleMessages(const char* id,uint16_t numMessages){
+MachineState SystemControl::HandleMessages(const char* id, TelegramCommands command){
 
-    for (uint16_t i = 0; i < numMessages; i++){
-        //Using string& because i need a string to compare 
-        const std::string& text = _TelegramBot.messages[i].text.c_str();
+    switch (command){
 
-        if (text == "")
-        {
-            Serial.println("void message");
-            continue; //pass to the next iteration
-        }
-
-        if (text == "/start")
+        case TelegramCommands::start:
         {
             Serial.println("/start");
             const char* messageSend = "AlarmClockBot begin";
             _TelegramBot.sendMessage(id,messageSend);
+            
+            return MachineState::sucess;
+
         }
 
-        else if (text == "/showAlarms")
-        {   
+        case TelegramCommands::showAlarms:
+        {
             Serial.println("/ShowAlarms");
-
             uint8_t index = findUserId(_LastUserID); //get user index
             std::string message = _users[index].getAlarms();//get alarms
 
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
+
+            return MachineState::sucess;
         }
 
-        else if (text == "/configAlarm")
+        case TelegramCommands::configAlarm: //state machine to configAlarms
         {
             Serial.println("/configAlarm");
+            MachineState ConfigState = configAlarm();
 
-            if (configAlarm() == -1){
-                Serial.println("ERRO");
+            if (ConfigState == MachineState::waiting){
+                break;
             }
 
-            else if (configAlarm() == true){
-                Serial.println("SUCESS");
+            else if (ConfigState == MachineState::sucess){
+                return MachineState::sucess;
+            }
+
+            else{
+                return MachineState::erro;
             }
 
         }
-        
-        else //command not found
-        {   
+
+        case TelegramCommands::help:
+        {
+            Serial.println("/help");
+            _TelegramBot.sendMessage(_LastUserID,"/help");
+            return MachineState::sucess;
+        }
+
+        case TelegramCommands::unknown: //command not found
+        {
             const char* message = "command not found, try /help";
-            
             Serial.println(message);
             _TelegramBot.sendMessage(_LastUserID,message);
+            
+            return MachineState::sucess;
         }
+
     }
+
+    return MachineState::waiting;
 }
 
 //State Machine for manager telegram actions
 void SystemControl::TelegramManager(){
+
+    static TelegramCommands LastTelegramMessage;
+    static int8_t freeUserIndex;
+
     switch (_State){
     
         case TelegramStates::idle: //waiting new messages from telegram
@@ -105,17 +120,17 @@ void SystemControl::TelegramManager(){
                 break;
             }
 
-            //handle messages
-            _State = TelegramStates::handle;
+            //get messages
+            _State = TelegramStates::getMessage;
             break;
         }
         
-        case TelegramStates::registerUser: //Register new user
+        case TelegramStates::checkFreeUser: //if doesn't register
         {
-            int8_t freeUserIndex = hasFreeUser();
+            freeUserIndex = hasFreeUser();
 
             if(freeUserIndex == -1){
-                const char* message = "All users is active";
+                const char* message = "All users slot is busy";
                 Serial.println(message);
                 _TelegramBot.sendMessage(_LastUserID,message);
 
@@ -123,21 +138,62 @@ void SystemControl::TelegramManager(){
                 break;
             }
 
+            else{
+                _State = TelegramStates::registerUser;
+                break;
+            }
+        }
+        
+        case TelegramStates::registerUser: //Register new user
+        {
+            MachineState registerState = newUser(freeUserIndex);
+
+            if (registerState == MachineState::waiting){
+                break;
+            }
+
             //when a new user be registered return to idle state 
-            if (newUser(freeUserIndex)){
+            else if (registerState == MachineState::sucess){
                 _State = TelegramStates::idle;
                 break;
             }
 
-            //waiting register 
+            //error to register user;
+            else{
+                _TelegramBot.sendMessage(_LastUserID,"erro to register user");
+
+                _State =TelegramStates::idle;
+                break;
+            }
+
+        }
+
+        case TelegramStates::getMessage: //get messages and convert to state machine
+        {
+            LastTelegramMessage = getCommand();
+            _State = TelegramStates::handle;
             break;
         }
 
         case TelegramStates::handle: //handle new messages
         {
-            HandleMessages(_LastUserID,_newMessages);
-            _State = TelegramStates::idle;
-            break;
+            MachineState handleState = HandleMessages(_LastUserID, LastTelegramMessage);
+
+            if (handleState == MachineState::waiting){
+                break;
+            }
+
+            else if (handleState == MachineState::sucess){
+                _State = TelegramStates::idle;
+                break;
+            }
+
+            else{
+                _TelegramBot.sendMessage(_LastUserID,"error to handle command");
+                
+                _State = TelegramStates::idle;
+                break;
+            }
         }
     }
 }
@@ -165,16 +221,16 @@ int8_t SystemControl::hasFreeUser() const{
 }
 
 //state machine to register new user, return true when finished
-bool SystemControl::newUser(uint8_t UserIndex){
+MachineState SystemControl::newUser(uint8_t UserIndex){
     static uint8_t newUserState = 0;
     static const char* username;
 
     switch(newUserState){
         case 0://Register New User
         {
-            const char* message0 = "Register user";
-            Serial.println(message0);
-            _TelegramBot.sendMessage(_LastUserID,message0);
+            const char* message = "Register user";
+            Serial.println(message);
+            _TelegramBot.sendMessage(_LastUserID,message);
             _TelegramBot.sendMessage(_LastUserID,"Send your username");
             
             newUserState = 1;
@@ -185,7 +241,8 @@ bool SystemControl::newUser(uint8_t UserIndex){
         { 
             Serial.println("Waiting username to register user");
             
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1)){
+            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
+            {
                 username = _TelegramBot.messages->text.c_str();
                 Serial.print("Username receive: ");
                 Serial.println(username);
@@ -193,9 +250,11 @@ bool SystemControl::newUser(uint8_t UserIndex){
                 newUserState = 2;
                 break;
             }
-            
-            //No response
-            break;
+
+            else //waiting
+            {
+                break;
+            }
         }
 
         case 2://Config User
@@ -208,15 +267,14 @@ bool SystemControl::newUser(uint8_t UserIndex){
             _TelegramBot.sendMessage(_LastUserID,"Now you can use commands");
 
             newUserState = 0;
-            return true; //User registered
+            return MachineState::sucess; //User registered
         }
     }
 
-    //in progress
-    return false;
+    return MachineState::waiting;
 }
 
-int8_t SystemControl::configAlarm(){
+MachineState SystemControl::configAlarm(){
     static uint8_t state = 0;
     static int8_t alarmIndex;
 
@@ -248,22 +306,26 @@ int8_t SystemControl::configAlarm(){
                 break;
             }
 
-            //no messages
-            break;
+            else{ //waiting
+                break;
+            }
         }
         
         case 2: //check if input is a number
         {
-            if (alarmIndex != 0){
-
+            if (alarmIndex != 0) //is a number
+            { 
                 Serial.println("IS A NUMBER");
                 state = 3;
                 break;
             }
 
-            //isn't a number
-            Serial.println("IS NOT A NUMBER");
-            state = 4;
+            else //isn't a number
+            {
+                Serial.println("IS NOT A NUMBER");
+                state = 0;
+                return MachineState::erro;
+            }    
         }
 
         case 3: //security check to prevent overflow
@@ -272,22 +334,32 @@ int8_t SystemControl::configAlarm(){
             {
                 Serial.println("input correct");
                 state = 0;
-                return true;
+                return MachineState::sucess;
             }
 
             else //incorrect input, alarm doesn't exist
             {
                 Serial.println("buffer overflow");
-                state = 4;
+                state = 0;
+                return MachineState::erro;
             }
-        }
-
-        case 4: //error
-        {
-            state = 0;
-            return -1;
         }
     }
 
-    return false;
+    return MachineState::waiting;
+}
+
+TelegramCommands SystemControl :: getCommand(){
+    std::string text = _TelegramBot.messages->text.c_str();
+    
+    // "/start"
+    if (text == "/start") {return TelegramCommands::start; }
+    // "/showAlarms"
+    if (text == "/showAlarms") {return TelegramCommands::showAlarms; }
+    // "/configAlarm"
+    if (text == "/configAlarm") {return TelegramCommands::configAlarm; }
+    // "/help"
+    if (text == "/help") {return TelegramCommands::help; }
+    // command not found
+    else {return TelegramCommands::unknown;}
 }

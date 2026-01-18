@@ -277,6 +277,9 @@ MachineState SystemControl::newUser(uint8_t UserIndex){
 MachineState SystemControl::configAlarm(){
     static uint8_t state = 0;
     static int8_t alarmIndex;
+    static uint8_t hour;
+    static uint8_t min;
+    static std::string label;
 
     switch(state){
         
@@ -311,38 +314,137 @@ MachineState SystemControl::configAlarm(){
             }
         }
         
-        case 2: //check if input is a number
+        case 2: //security check
         {
-            if (alarmIndex != 0) //is a number
-            { 
-                Serial.println("IS A NUMBER");
+            if (alarmIndex == -1) //isn't a number
+            {
+                Serial.println("isn't a number");
+                state = 0;
+                return MachineState::erro;
+            }
+
+            else if (alarmIndex == 0 || alarmIndex > maxSizeOfAlarmsArray) //array overflow
+            {
+                Serial.println("wrong input, array overflow");
+                state = 0;
+                return MachineState::erro;
+            }
+            
+            else{
                 state = 3;
                 break;
             }
-
-            else //isn't a number
-            {
-                Serial.println("IS NOT A NUMBER");
-                state = 0;
-                return MachineState::erro;
-            }    
         }
 
-        case 3: //security check to prevent overflow
+        case 3: //hour
         {
-            if (alarmIndex > 0 && alarmIndex <= maxSizeOfAlarmsArray)
+            _TelegramBot.sendMessage(_LastUserID,"Send the hour (24h format):");
+            state = 4;
+            break;
+        }
+
+        case 4: //waiting hour
+        {
+            Serial.println("waiting hour");
+
+            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1)){
+                
+                Serial.println("hour receive");
+                hour = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
+                
+                state = 5;
+                break;
+            }
+
+            else{//waiting
+                break;
+            }
+        }
+
+        case 5: //check hour format
+        {
+            if (hour >= 0 and hour <=23){
+                state = 6;
+                break;
+            }
+            else{ //format error
+                state = 0;
+                return MachineState::erro;
+            }
+        }
+
+        case 6: //min
+        {
+            _TelegramBot.sendMessage(_LastUserID,"Send the minute:");
+            state = 7;
+            break;
+        }
+
+        case 7: //waiting hour
+        {
+            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
             {
-                Serial.println("input correct");
+                min = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
+                
+                state = 8;
+                break;
+            }
+
+            else{//waiting
+                break;
+            }
+        }
+
+        case 8: //check minute format
+        {
+            if (min >= 0 and min <= 59){
+                state = 9;
+                break;
+            }
+            
+            else{
+                state = 0;
+                return MachineState::erro;
+            }
+        }
+
+        case 9: //label
+        {
+            _TelegramBot.sendMessage(_LastUserID,"send a label:");
+            state = 10;
+            break;
+        }
+
+        case 10: //waiting label
+        {
+            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1)){
+                label = _TelegramBot.messages->text.c_str();
+                state = 11;
+                break;
+            }
+
+            else{ //waiting
+                break;
+            }
+        }
+
+        case 11: //configuring alarm
+        {
+            uint8_t userIndex = findUserId(_LastUserID);
+            bool addState = _users[userIndex].addAlarm(alarmIndex-1,hour,min,label.c_str());
+
+            if (addState){
+                _TelegramBot.sendMessage(_LastUserID,"alarm added sucessfully");
                 state = 0;
                 return MachineState::sucess;
             }
 
-            else //incorrect input, alarm doesn't exist
-            {
-                Serial.println("buffer overflow");
+            else{
+                _TelegramBot.sendMessage(_LastUserID,"error to add Alarm");
                 state = 0;
                 return MachineState::erro;
             }
+            
         }
     }
 

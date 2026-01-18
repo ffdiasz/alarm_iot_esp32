@@ -18,6 +18,7 @@ bool Alarm::getState() const{
     return _state;
 }
 
+//return a const char* label
 const char* Alarm::getLabel() const{
     return _label.c_str();
 }

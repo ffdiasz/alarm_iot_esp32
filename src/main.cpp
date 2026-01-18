@@ -2,6 +2,7 @@
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include "alarm_manager.h"
+#include "user_manager.h"
 #include "wifi_manager.h"
 #include "secure.h"
 #include "ntp.h"
@@ -35,8 +36,11 @@ bool NTPstatus = false;
 WiFiClientSecure secured_client;
 UniversalTelegramBot AlarmClockBot(Secure::BOT_TOKEN, secured_client);
 
+//Init Users
+std::array <user, maxUsers> users;
+
 //SystemControl
-SystemControl SystemManager(AlarmClockBot);
+SystemControl SystemManager(AlarmClockBot, users);
 
 void setup() {
   delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!

@@ -34,14 +34,14 @@ enum class MachineState : uint8_t{
 
 class SystemControl {
 private:
-    std::array <user,maxUsers> _users;
+    std::array <user,maxUsers>& _users;
     UniversalTelegramBot& _TelegramBot;
     const char* _LastUserID;
     TelegramStates _State;
     uint16_t _newMessages;
 public:
     //Constructor
-    SystemControl(UniversalTelegramBot& TelegramBot);
+    SystemControl(UniversalTelegramBot& TelegramBot, std::array <user, maxUsers>& users);
 
     void TelegramManager();
 

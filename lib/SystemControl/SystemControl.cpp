@@ -1,8 +1,8 @@
 #include "SystemControl.h"
 
 //Constructor
-SystemControl::SystemControl(UniversalTelegramBot& TelegramBot)
-:_TelegramBot(TelegramBot), _State(TelegramStates::idle), _newMessages(0)
+SystemControl::SystemControl(UniversalTelegramBot& TelegramBot, std::array <user, maxUsers>& users)
+:_TelegramBot(TelegramBot), _State(TelegramStates::idle), _newMessages(0), _users(users)
 {
 
 }
@@ -16,71 +16,6 @@ bool SystemControl::CheckAlarms(struct tm& timeNow){
     }
 
     return false;
-}
-
-MachineState SystemControl::HandleMessages(const char* id, TelegramCommands command){
-
-    switch (command){
-
-        case TelegramCommands::start:
-        {
-            Serial.println("/start");
-            const char* messageSend = "AlarmClockBot begin";
-            _TelegramBot.sendMessage(id,messageSend);
-            
-            return MachineState::sucess;
-
-        }
-
-        case TelegramCommands::showAlarms:
-        {
-            Serial.println("/ShowAlarms");
-            uint8_t index = findUserId(_LastUserID); //get user index
-            std::string message = _users[index].getAlarms();//get alarms
-
-            _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
-
-            return MachineState::sucess;
-        }
-
-        case TelegramCommands::configAlarm: //state machine to configAlarms
-        {
-            Serial.println("/configAlarm");
-            MachineState ConfigState = configAlarm();
-
-            if (ConfigState == MachineState::waiting){
-                break;
-            }
-
-            else if (ConfigState == MachineState::sucess){
-                return MachineState::sucess;
-            }
-
-            else{
-                return MachineState::erro;
-            }
-
-        }
-
-        case TelegramCommands::help:
-        {
-            Serial.println("/help");
-            _TelegramBot.sendMessage(_LastUserID,"/help");
-            return MachineState::sucess;
-        }
-
-        case TelegramCommands::unknown: //command not found
-        {
-            const char* message = "command not found, try /help";
-            Serial.println(message);
-            _TelegramBot.sendMessage(_LastUserID,message);
-            
-            return MachineState::sucess;
-        }
-
-    }
-
-    return MachineState::waiting;
 }
 
 //State Machine for manager telegram actions
@@ -196,6 +131,71 @@ void SystemControl::TelegramManager(){
             }
         }
     }
+}
+
+MachineState SystemControl::HandleMessages(const char* id, TelegramCommands command){
+
+    switch (command){
+
+        case TelegramCommands::start:
+        {
+            Serial.println("/start");
+            const char* messageSend = "AlarmClockBot begin";
+            _TelegramBot.sendMessage(id,messageSend);
+            
+            return MachineState::sucess;
+
+        }
+
+        case TelegramCommands::showAlarms:
+        {
+            Serial.println("/ShowAlarms");
+            uint8_t index = findUserId(_LastUserID); //get user index
+            std::string message = _users[index].getAlarms();//get alarms
+
+            _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
+
+            return MachineState::sucess;
+        }
+
+        case TelegramCommands::configAlarm: //state machine to configAlarms
+        {
+            Serial.println("/configAlarm");
+            MachineState ConfigState = configAlarm();
+
+            if (ConfigState == MachineState::waiting){
+                break;
+            }
+
+            else if (ConfigState == MachineState::sucess){
+                return MachineState::sucess;
+            }
+
+            else{
+                return MachineState::erro;
+            }
+
+        }
+
+        case TelegramCommands::help:
+        {
+            Serial.println("/help");
+            _TelegramBot.sendMessage(_LastUserID,"/help");
+            return MachineState::sucess;
+        }
+
+        case TelegramCommands::unknown: //command not found
+        {
+            const char* message = "command not found, try /help";
+            Serial.println(message);
+            _TelegramBot.sendMessage(_LastUserID,message);
+            
+            return MachineState::sucess;
+        }
+
+    }
+
+    return MachineState::waiting;
 }
 
 //return user index or -1 if doesn't exists

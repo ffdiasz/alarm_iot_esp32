@@ -19,7 +19,7 @@ bool Alarm::getState() const{
 }
 
 const char* Alarm::getLabel() const{
-    return _label;
+    return _label.c_str();
 }
 
 //Check if it's time to sound alarm

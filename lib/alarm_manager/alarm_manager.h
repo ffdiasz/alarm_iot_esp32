@@ -5,7 +5,7 @@
 
 class Alarm{
 private:
-    const char* _label;
+    std::string _label;
     struct tm _AlarmTime;
     bool _state;
 

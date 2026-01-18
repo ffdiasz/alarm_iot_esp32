@@ -56,7 +56,7 @@ std::string user::getAlarms() const{
     char charAlarms[64];
 
     for (const auto& alarm : myAlarms){
-        snprintf(charAlarms, sizeof(charAlarms), "*Alarme:* [%02d:%02d] *Label:* %s *State:* %s \n",
+        snprintf(charAlarms, sizeof(charAlarms), "*Alarme:* %02d:%02d *Label:* %s *State:* %s \n",
         alarm.getAlarm().tm_hour,
         alarm.getAlarm().tm_min,
         alarm.getLabel(),

@@ -1,5 +1,5 @@
 #pragma once
-#include <alarm_manager.h>
+#include <alarm.h>
 
 constexpr const uint8_t maxSizeOfAlarmsArray = 5;
 

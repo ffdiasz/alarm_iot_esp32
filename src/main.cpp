@@ -7,15 +7,16 @@
 #include "secure.h"
 #include "ntp.h"
 #include "SystemControl.h"
+#include "buzzer.hpp"
 #include "array"
 
 //Time to main tasks
 constexpr const uint32_t maxWaitTimeWifi    = 1000 * 15;      // 15 secs
 constexpr const uint32_t maxWaitTimeNtp     = 1000 * 15;      // 15 secs
-constexpr const uint32_t wifiCheckTime      = 1000 * 60;      // 1 minute
+constexpr const uint32_t wifiCheckTime      = 1000 * 60;      // 01 minutes
 constexpr const uint32_t ntpCheckTime       = 1000 * 60 * 30; // 30 minutes
-constexpr const uint32_t syncCheckTime      = 1000 * 60;      // 1 minute
-constexpr const uint32_t messageCheckTime   = 500;           // 0.5 sec
+constexpr const uint32_t syncCheckTime      = 1000 * 60;      // 01 minutes
+constexpr const uint32_t messageCheckTime   = 500;            // 0.5 secs
 
 //PreviousTime to main tasks
 uint32_t previousWifiCheck;
@@ -26,7 +27,7 @@ uint32_t previousMessageCheck;
 //NTP
 constexpr const char* ntpServer = "pool.ntp.org";
 constexpr const int32_t  gmtOffset_sec = -3 * 3600; //BRT - brazil
-constexpr const int32_t   daylightOffset_sec = 0; //daylight off
+constexpr const int32_t   daylightOffset_sec = 0;   //daylight off
 
 //StateFlags
 bool wifiConnected = false;
@@ -41,6 +42,10 @@ std::array <user, maxUsers> users;
 
 //SystemControl
 SystemControl SystemManager(AlarmClockBot, users);
+
+//Buzzer
+buzzer BuzzerAlarm(4,300);
+bool alarmTriggered;
 
 void setup() {
   delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!
@@ -63,6 +68,16 @@ void setup() {
 
 void loop() {
   uint32_t now = millis();
+  struct tm timeNow = getTime();
+
+  alarmTriggered = SystemManager.CheckAlarms(timeNow);
+
+  if (alarmTriggered){
+    BuzzerAlarm.pulse(500,128);
+  } 
+  else{
+    BuzzerAlarm.off();
+  }
 
   // TASK 1: Alarms and Telegram (1 sec)
   if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){

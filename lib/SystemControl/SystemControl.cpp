@@ -9,12 +9,22 @@ SystemControl::SystemControl(UniversalTelegramBot& TelegramBot, std::array <user
 
 //if user is active and have alarm to ring return true
 bool SystemControl::CheckAlarms(struct tm& timeNow){
-    for (const auto& user : _users){
-        if (user.isActive() && user.checkAlarms(timeNow)){
-            return true;
+    for (auto& user: _users)
+    {
+        //user active?
+        if (user.isActive())
+        {
+            //receive userAlarms reference
+            alarm_manager userAlarms = user.getUserAlarms();
+
+            //alarm trigged?
+            if (userAlarms.checkAlarms(timeNow)){
+                return true;
+            }
         }
     }
 
+    //no alarms triggered
     return false;
 }
 
@@ -151,7 +161,7 @@ MachineState SystemControl::HandleMessages(const char* id, TelegramCommands comm
         {
             Serial.println("/ShowAlarms");
             uint8_t index = findUserId(_LastUserID); //get user index
-            std::string message = _users[index].getAlarms();//get alarms
+            std::string message = _users[index].getUserAlarms().getAlarms();//get userAlarms Reference and getAlarms
 
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
 
@@ -287,7 +297,7 @@ MachineState SystemControl::configAlarm(){
         {   
             _TelegramBot.sendMessage(_LastUserID, "Which alarm you want config? send the line number");
             uint8_t index = findUserId(_LastUserID); //get user index
-            std::string message = _users[index].getAlarms();//get alarms
+            std::string message = _users[index].getUserAlarms().getAlarms();//get userAlarms reference and getAlarms
 
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
 
@@ -323,7 +333,7 @@ MachineState SystemControl::configAlarm(){
                 return MachineState::erro;
             }
 
-            else if (alarmIndex == 0 || alarmIndex > maxSizeOfAlarmsArray) //array overflow
+            else if (alarmIndex == 0 || alarmIndex > maxAlarms) //array overflow
             {
                 Serial.println("wrong input, array overflow");
                 state = 0;
@@ -431,7 +441,7 @@ MachineState SystemControl::configAlarm(){
         case 11: //configuring alarm
         {
             uint8_t userIndex = findUserId(_LastUserID);
-            bool addState = _users[userIndex].addAlarm(alarmIndex-1,hour,min,label.c_str());
+            bool addState = _users[userIndex].getUserAlarms().addAlarm(alarmIndex-1,hour,min,label.c_str());
 
             if (addState){
                 _TelegramBot.sendMessage(_LastUserID,"alarm added sucessfully");

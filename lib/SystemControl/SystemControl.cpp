@@ -1,31 +1,10 @@
 #include "SystemControl.h"
 
 //Constructor
-SystemControl::SystemControl(UniversalTelegramBot& TelegramBot, std::array <user, maxUsers>& users)
+SystemControl::SystemControl(UniversalTelegramBot& TelegramBot, user_manager& users)
 :_TelegramBot(TelegramBot), _State(TelegramStates::idle), _newMessages(0), _users(users)
 {
 
-}
-
-//if user is active and have alarm to ring return true
-bool SystemControl::CheckAlarms(struct tm& timeNow){
-    for (auto& user: _users)
-    {
-        //user active?
-        if (user.isActive())
-        {
-            //receive userAlarms reference
-            alarm_manager userAlarms = user.getUserAlarms();
-
-            //alarm trigged?
-            if (userAlarms.checkAlarms(timeNow)){
-                return true;
-            }
-        }
-    }
-
-    //no alarms triggered
-    return false;
 }
 
 //State Machine for manager telegram actions
@@ -56,7 +35,7 @@ void SystemControl::TelegramManager(){
             Serial.println(_LastUserID);
 
             //if user isn't registered send to RegisterUser
-            if (findUserId(_LastUserID) == -1){
+            if (_users.findUserId(_LastUserID) == -1){
                 const char* message = "User doesn't register";
                 Serial.println(message);
                 _TelegramBot.sendMessage(_LastUserID,message);
@@ -72,7 +51,7 @@ void SystemControl::TelegramManager(){
         
         case TelegramStates::checkFreeUser: //if doesn't register
         {
-            freeUserIndex = hasFreeUser();
+            freeUserIndex = _users.hasFreeUser();
 
             if(freeUserIndex == -1){
                 const char* message = "All users slot is busy";
@@ -143,6 +122,7 @@ void SystemControl::TelegramManager(){
     }
 }
 
+//process the commands from telegram
 MachineState SystemControl::HandleMessages(const char* id, TelegramCommands command){
 
     switch (command){
@@ -160,8 +140,10 @@ MachineState SystemControl::HandleMessages(const char* id, TelegramCommands comm
         case TelegramCommands::showAlarms:
         {
             Serial.println("/ShowAlarms");
-            uint8_t index = findUserId(_LastUserID); //get user index
-            std::string message = _users[index].getUserAlarms().getAlarms();//get userAlarms Reference and getAlarms
+            uint8_t index = _users.findUserId(_LastUserID); //get user index
+            user* mUser = _users.getUser(index);
+
+            std::string message = mUser->getUserAlarms().getAlarms();//get userAlarms Reference and getAlarms
 
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
 
@@ -208,28 +190,6 @@ MachineState SystemControl::HandleMessages(const char* id, TelegramCommands comm
     return MachineState::waiting;
 }
 
-//return user index or -1 if doesn't exists
-int8_t SystemControl::findUserId(const char* id) const{
-    for (uint8_t i = 0; i < maxUsers; i++){
-        if (_users[i].getId() == id){
-            return i;
-        }
-    }
-    //user id doesn't exists in array
-    return -1;
-}
-
-//return user index or -1 if all user status is active
-int8_t SystemControl::hasFreeUser() const{
-    for (uint8_t i = 0; i < maxUsers; i++){
-        if (!_users[i].isActive()){
-            return i;
-        }
-    }
-    //all user is active
-    return -1;
-}
-
 //state machine to register new user, return true when finished
 MachineState SystemControl::newUser(uint8_t UserIndex){
     static uint8_t newUserState = 0;
@@ -269,9 +229,11 @@ MachineState SystemControl::newUser(uint8_t UserIndex){
 
         case 2://Config User
         {
-            _users[UserIndex].setName(username);
-            _users[UserIndex].setId(_LastUserID);
-            _users[UserIndex].setState(true);
+            user* mUser = _users.getUser(UserIndex);
+
+            mUser->setName(username);
+            mUser->setId(_LastUserID);
+            mUser->setState(true);
 
             _TelegramBot.sendMessage(_LastUserID, "New user registered");
             _TelegramBot.sendMessage(_LastUserID,"Now you can use commands");
@@ -284,6 +246,7 @@ MachineState SystemControl::newUser(uint8_t UserIndex){
     return MachineState::waiting;
 }
 
+//state machine to config alarms
 MachineState SystemControl::configAlarm(){
     static uint8_t state = 0;
     static int8_t alarmIndex;
@@ -296,8 +259,15 @@ MachineState SystemControl::configAlarm(){
         case 0: //showAlarms
         {   
             _TelegramBot.sendMessage(_LastUserID, "Which alarm you want config? send the line number");
-            uint8_t index = findUserId(_LastUserID); //get user index
-            std::string message = _users[index].getUserAlarms().getAlarms();//get userAlarms reference and getAlarms
+            uint8_t index = _users.findUserId(_LastUserID); //get user index
+
+            if (index == -1){
+                return MachineState::erro;
+            }
+
+            user* mUser = _users.getUser(index);
+
+            std::string message = mUser->getUserAlarms().getAlarms();//get userAlarms reference and getAlarms
 
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
 
@@ -440,8 +410,10 @@ MachineState SystemControl::configAlarm(){
 
         case 11: //configuring alarm
         {
-            uint8_t userIndex = findUserId(_LastUserID);
-            bool addState = _users[userIndex].getUserAlarms().addAlarm(alarmIndex-1,hour,min,label.c_str());
+            uint8_t userIndex = _users.findUserId(_LastUserID);
+            user* mUser = _users.getUser(userIndex);
+
+            bool addState = mUser->getUserAlarms().addAlarm(alarmIndex-1,hour,min,label.c_str());
 
             if (addState){
                 _TelegramBot.sendMessage(_LastUserID,"alarm added sucessfully");
@@ -461,6 +433,7 @@ MachineState SystemControl::configAlarm(){
     return MachineState::waiting;
 }
 
+//get message from telegram and parse to TelegramCommands to be process by stateMachine
 TelegramCommands SystemControl :: getCommand(){
     std::string text = _TelegramBot.messages->text.c_str();
     

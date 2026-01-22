@@ -1,8 +1,7 @@
 #pragma once
 #include "UniversalTelegramBot.h"
-#include "user.h"
+#include "user_manager.h"
 #include "cstdint"
-#include "array"
 #include "string"
 
 constexpr const uint8_t maxUsers = 4;
@@ -34,22 +33,16 @@ enum class MachineState : uint8_t{
 
 class SystemControl {
 private:
-    std::array <user,maxUsers>& _users;
+    user_manager& _users;
     UniversalTelegramBot& _TelegramBot;
     const char* _LastUserID;
     TelegramStates _State;
     uint16_t _newMessages;
 public:
     //Constructor
-    SystemControl(UniversalTelegramBot& TelegramBot, std::array <user, maxUsers>& users);
+    SystemControl(UniversalTelegramBot& TelegramBot, user_manager& users);
 
     void TelegramManager();
-
-    bool CheckAlarms(struct tm& timeNow);
-
-    int8_t findUserId(const char* id) const;
-
-    int8_t hasFreeUser() const;
 
     TelegramCommands getCommand(); 
 

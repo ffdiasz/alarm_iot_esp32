@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
-#include "user.h"
+#include "user_manager.h"
 #include "wifi_manager.h"
 #include "secure.h"
 #include "ntp.h"
@@ -37,7 +37,7 @@ WiFiClientSecure secured_client;
 UniversalTelegramBot AlarmClockBot(Secure::BOT_TOKEN, secured_client);
 
 //Init Users
-std::array <user, maxUsers> users;
+user_manager users;
 
 //SystemControl
 SystemControl SystemManager(AlarmClockBot, users);
@@ -69,7 +69,7 @@ void loop() {
   uint32_t now = millis();
   struct tm timeNow = getTime();
 
-  alarmTriggered = SystemManager.CheckAlarms(timeNow);
+  alarmTriggered = users.CheckAlarms(timeNow);
 
   if (alarmTriggered){
     BuzzerAlarm.pulse(500,128);

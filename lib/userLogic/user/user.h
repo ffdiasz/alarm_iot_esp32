@@ -22,7 +22,7 @@ public:
     //gets
     const char* getName() const;
     const char* getId() const;
-    bool isActive() const;
+    bool isActive() const; //getState
 
-    alarm_manager& getUserAlarms();
+    alarm_manager& getUserAlarms(); //return a reference of _UserAlarms
 };

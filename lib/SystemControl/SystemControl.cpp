@@ -193,38 +193,33 @@ MachineState SystemControl::HandleMessages(const char* id, TelegramCommands comm
 //state machine to register new user, return true when finished
 MachineState SystemControl::newUser(uint8_t UserIndex){
     static uint8_t newUserState = 0;
+    static uint8_t lastState;
+    
+    static uint32_t previousTimeOut = 0;
+
     static const char* username;
 
     switch(newUserState){
-        case 0://Register New User
+        case 0://ask for username
         {
             const char* message = "Register user";
             Serial.println(message);
-            _TelegramBot.sendMessage(_LastUserID,message);
-            _TelegramBot.sendMessage(_LastUserID,"Send your username");
+            _TelegramBot.sendMessage(_LastUserID,"Send your username to register user:");
             
-            newUserState = 1;
+            newUserState = 3; //waiting input
+            lastState = 0;
+
+            previousTimeOut = millis();
             break;
         }
 
-        case 1://Waiting username
+        case 1://receive username
         { 
-            Serial.println("Waiting username to register user");
+            username = _TelegramBot.messages->text.c_str();
+
+            newUserState = 2;
+            break;
             
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
-            {
-                username = _TelegramBot.messages->text.c_str();
-                Serial.print("Username receive: ");
-                Serial.println(username);
-
-                newUserState = 2;
-                break;
-            }
-
-            else //waiting
-            {
-                break;
-            }
         }
 
         case 2://Config User
@@ -241,6 +236,25 @@ MachineState SystemControl::newUser(uint8_t UserIndex){
             newUserState = 0;
             return MachineState::sucess; //User registered
         }
+
+        case 3: //waiting input
+        {
+            if(_TelegramBot.getUpdates(_TelegramBot.last_message_received+1))
+            {
+                previousTimeOut = millis();
+                newUserState = lastState + 1;
+                break;
+            }
+
+            //watchDogTime - 3min
+            if (millis() - previousTimeOut >= 1000* 60 * 3){
+                _TelegramBot.sendMessage(_LastUserID,"No response, action cancelled.");
+                return MachineState::erro;
+            }
+
+            //waiting new messages
+            break;
+        }
     }
 
     return MachineState::waiting;
@@ -249,6 +263,10 @@ MachineState SystemControl::newUser(uint8_t UserIndex){
 //state machine to config alarms
 MachineState SystemControl::configAlarm(){
     static uint8_t state = 0;
+    static uint8_t lastState;
+
+    static uint32_t previousTimeOut = 0;
+
     static int8_t alarmIndex;
     static uint8_t hour;
     static uint8_t min;
@@ -256,42 +274,37 @@ MachineState SystemControl::configAlarm(){
 
     switch(state){
         
-        case 0: //showAlarms
+        case 0: //ask for alarm index
         {   
-            _TelegramBot.sendMessage(_LastUserID, "Which alarm you want config? send the line number");
             uint8_t index = _users.findUserId(_LastUserID); //get user index
+            if (index == -1) { return MachineState::erro; } //check if user exist
 
-            if (index == -1){
-                return MachineState::erro;
-            }
-
+            //GET user alarms
             user* mUser = _users.getUser(index);
-
             std::string message = mUser->getUserAlarms().getAlarms();//get userAlarms reference and getAlarms
 
+            //SHOW Alarms
+            _TelegramBot.sendMessage(_LastUserID, "Which alarm you want config? send the line number");
             _TelegramBot.sendMessage(_LastUserID,message.c_str(), "Markdown");
 
-            state = 1;
+            lastState = 0;
+            state = 12; //waiting input
+
+            previousTimeOut = millis();
             break;
         }
 
-        case 1: //waiting alarm index
+        case 1: //receive alarm index
         {
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
-            {
-                //receive msg from telegram and convert to int
-                const char* msg = _TelegramBot.messages->text.c_str();
-                alarmIndex = std::atoi(msg); //convert string to int
+            //receive msg from telegram and convert to int
+            const char* msg = _TelegramBot.messages->text.c_str();
+            alarmIndex = std::atoi(msg); //convert string to int
 
-                Serial.println("String converted");
+            Serial.println("String converted");
 
-                state = 2;
-                break;
-            }
-
-            else{ //waiting
-                break;
-            }
+            state = 2;
+            break;
+            
         }
         
         case 2: //security check
@@ -316,29 +329,23 @@ MachineState SystemControl::configAlarm(){
             }
         }
 
-        case 3: //hour
+        case 3: //ask for hour
         {
             _TelegramBot.sendMessage(_LastUserID,"Send the hour (24h format):");
-            state = 4;
+            lastState = 3;
+            state = 12; //waiting input;
+
+            previousTimeOut = millis();
             break;
         }
 
-        case 4: //waiting hour
+        case 4: //receive hour
         {
-            Serial.println("waiting hour");
-
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1)){
-                
-                Serial.println("hour receive");
-                hour = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
-                
-                state = 5;
-                break;
-            }
-
-            else{//waiting
-                break;
-            }
+            Serial.println("hour receive"); //debug
+            hour = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
+            
+            state = 5;
+            break;
         }
 
         case 5: //check hour format
@@ -353,26 +360,22 @@ MachineState SystemControl::configAlarm(){
             }
         }
 
-        case 6: //min
+        case 6: //ask for min
         {
             _TelegramBot.sendMessage(_LastUserID,"Send the minute:");
-            state = 7;
+            lastState = 6;
+            state = 12; //waiting input
+
+            previousTimeOut = millis();
             break;
         }
 
-        case 7: //waiting hour
+        case 7: //receive min
         {
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1))
-            {
-                min = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
-                
-                state = 8;
-                break;
-            }
-
-            else{//waiting
-                break;
-            }
+            min = std::atoi(_TelegramBot.messages->text.c_str()); //convert to int
+            
+            state = 8;
+            break;
         }
 
         case 8: //check minute format
@@ -388,24 +391,21 @@ MachineState SystemControl::configAlarm(){
             }
         }
 
-        case 9: //label
+        case 9: //ask for label
         {
             _TelegramBot.sendMessage(_LastUserID,"send a label:");
-            state = 10;
+            lastState = 9;
+            state = 12; //waiting input
+
+            previousTimeOut = millis();
             break;
         }
 
-        case 10: //waiting label
+        case 10: //receive label
         {
-            if (_TelegramBot.getUpdates(_TelegramBot.last_message_received + 1)){
-                label = _TelegramBot.messages->text.c_str();
-                state = 11;
-                break;
-            }
-
-            else{ //waiting
-                break;
-            }
+            label = _TelegramBot.messages->text.c_str();
+            state = 11;
+            break;
         }
 
         case 11: //configuring alarm
@@ -427,6 +427,25 @@ MachineState SystemControl::configAlarm(){
                 return MachineState::erro;
             }
             
+        }
+
+        case 12: //waiting input
+        {
+            if(_TelegramBot.getUpdates(_TelegramBot.last_message_received+1))
+            {
+                previousTimeOut = millis();
+                state = lastState + 1;
+                break;
+            }
+
+            //watchDogTime - 3min
+            if (millis() - previousTimeOut >= 1000* 60 * 3){
+                _TelegramBot.sendMessage(_LastUserID,"No response, action cancelled.");
+                return MachineState::erro;
+            }
+
+            //waiting new messages
+            break;
         }
     }
 

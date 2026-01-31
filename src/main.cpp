@@ -16,12 +16,14 @@ constexpr const uint32_t wifiCheckTime      = 1000 * 60;      // 01 minutes
 constexpr const uint32_t ntpCheckTime       = 1000 * 60 * 30; // 30 minutes
 constexpr const uint32_t syncCheckTime      = 1000 * 60;      // 01 minutes
 constexpr const uint32_t messageCheckTime   = 500;            // 0.5 secs
+constexpr const uint32_t alarmCheckTime     = 1000 * 60;      // 01 minutes
 
 //PreviousTime to main tasks
 uint32_t previousWifiCheck;
 uint32_t previousNtpCheck;
 uint32_t previousSyncCheck;
 uint32_t previousMessageCheck;
+uint32_t previousAlarmCheck;
 
 //NTP
 constexpr const char* ntpServer = "pool.ntp.org";
@@ -59,18 +61,17 @@ void setup() {
   //Get Current time
   NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, maxWaitTimeNtp); // wait 15 secs max
 
-  previousWifiCheck = millis();
-  previousMessageCheck = millis();
-  previousNtpCheck = millis();
-  previousSyncCheck = millis();
+  uint32_t timeNow = millis(); 
+  previousWifiCheck = timeNow;
+  previousMessageCheck = timeNow;
+  previousNtpCheck = timeNow;
+  previousSyncCheck = timeNow;
+  previousAlarmCheck = timeNow;
 }
 
 void loop() {
   uint32_t now = millis();
-  struct tm timeNow = getTime();
-
-  alarmTriggered = users.CheckAlarms(timeNow);
-
+  
   if (alarmTriggered){
     BuzzerAlarm.pulse(500,128);
   } 
@@ -79,20 +80,28 @@ void loop() {
   }
 
   // TASK 1: Alarms and Telegram (1 sec)
-  if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){
+  if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime))
+  {
     SystemManager.TelegramManager();
   
     previousMessageCheck = millis();
   }
 
-  //TASK 2: Check Wifi Connection (1 minute)
+  // TASK 2: Check alarms (1 minute)
+  if (now - previousAlarmCheck >= alarmCheckTime)
+  {
+      struct tm timeNow = getTime();
+      alarmTriggered = users.CheckAlarms(timeNow);
+  }
+  
+  // TASK 2: Check Wifi Connection (1 minute)
   if (now - previousWifiCheck > wifiCheckTime){
     wifiConnected = checkWifiStatus();
 
     previousWifiCheck = millis();
   }
 
-  //TASK 3: Resync NTP (30 Minutes)
+  // TASK 3: Resync NTP (30 Minutes)
   if (wifiConnected && (now - previousNtpCheck > ntpCheckTime)){
     NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
 

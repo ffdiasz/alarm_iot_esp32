@@ -7,7 +7,7 @@
 #include "ntp.h"
 #include "SystemControl.h"
 #include "buzzer.hpp"
-#include "array"
+#include "button.h"
 
 //Time to main tasks
 constexpr const uint32_t maxWaitTimeWifi    = 1000 * 15;      // 15 secs
@@ -45,13 +45,22 @@ user_manager users;
 SystemControl SystemManager(AlarmClockBot, users);
 
 //Buzzer
-buzzer BuzzerAlarm(4,300);
-bool alarmTriggered;
+constexpr const uint8_t buzzerPin = 4;
+constexpr const uint16_t freq = 300; //300 Hz
+bool hasAlarmTriggered;
+buzzer BuzzerAlarm(buzzerPin,freq);
+
+//button
+constexpr const uint8_t buttonPin = 5;
+constexpr const bool pullResistorType = true; //pull_up
+button buttonBuzzer(buttonPin);
 
 void setup() {
-  delay(500); //ESSA LINHA GARANTE A ESTABILIDADE DO SISTEMA NÃO MEXER!
-
+  delay(500); //Dude... if you love your life, DON'T TOUCH! OK?
   Serial.begin(115200);
+
+  buttonBuzzer.begin(pullResistorType,FALLING);
+
   //Connect to wifi and do some configs
   wifiConnected = wifiConect(Secure::SSID, Secure::PASSWORD, maxWaitTimeWifi); // wait 15 secs max
 
@@ -72,36 +81,42 @@ void setup() {
 void loop() {
   uint32_t now = millis();
   
-  if (alarmTriggered){
-    BuzzerAlarm.pulse(500,128);
-  } 
-  else{
+  // Turn off buzzer when button pressed
+  if(hasAlarmTriggered && buttonBuzzer.wasClicked()){
+    hasAlarmTriggered = false;
     BuzzerAlarm.off();
   }
 
-  // TASK 1: Alarms and Telegram (1 sec)
-  if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime))
-  {
+  // TASK 1: HandleMessages in telegram every second (1 sec)
+  if ((wifiConnected && NTPstatus) && (now - previousMessageCheck > messageCheckTime)){
     SystemManager.TelegramManager();
   
     previousMessageCheck = millis();
   }
 
-  // TASK 2: Check alarms (1 minute)
-  if (now - previousAlarmCheck >= alarmCheckTime)
-  {
+  // TASK 2: Check alarm state every minute (1 minute)
+  if (now - previousAlarmCheck >= alarmCheckTime){
       struct tm timeNow = getTime();
-      alarmTriggered = users.CheckAlarms(timeNow);
+      hasAlarmTriggered = users.CheckAlarms(timeNow);
+
+      if (hasAlarmTriggered){
+        BuzzerAlarm.on(128);
+      }
+      else{
+        BuzzerAlarm.off();
+      }
+
+      previousAlarmCheck = millis();
   }
   
-  // TASK 2: Check Wifi Connection (1 minute)
+  // TASK 3: Check Wifi Connection (1 minute)
   if (now - previousWifiCheck > wifiCheckTime){
     wifiConnected = checkWifiStatus();
 
     previousWifiCheck = millis();
   }
 
-  // TASK 3: Resync NTP (30 Minutes)
+  // TASK 4: Resync NTP (30 Minutes)
   if (wifiConnected && (now - previousNtpCheck > ntpCheckTime)){
     NTPstatus = ntpSync(gmtOffset_sec, daylightOffset_sec, ntpServer, 0);
 

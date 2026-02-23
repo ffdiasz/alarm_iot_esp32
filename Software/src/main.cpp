@@ -8,6 +8,12 @@
 =-=-=-= HARDWARE =-=-=-
 1- FAZER UMA FONTE EXTERNA PARA O ESP32 SE MANTER LIGADO
 */
+
+// PINOUT: 
+constexpr const uint8_t buzzerPin = 4;
+constexpr const uint8_t buttonPin = 5;
+
+// INCLUDES
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
@@ -55,13 +61,11 @@ user_manager users;
 SystemControl SystemManager(AlarmClockBot, users);
 
 //Buzzer
-constexpr const uint8_t buzzerPin = 4;
 constexpr const uint16_t freq = 300; //300 Hz
 bool hasAlarmTriggered;
 buzzer BuzzerAlarm(buzzerPin,freq);
 
 //button
-constexpr const uint8_t buttonPin = 5;
 constexpr const bool pullResistorType = true; //pull_up
 button buttonBuzzer(buttonPin);
 
